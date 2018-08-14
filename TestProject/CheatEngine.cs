@@ -6,22 +6,23 @@ namespace TestProject
 {
     public class CheatEngine
     {
-        public static string ChangeCurrentWordWithHarderOneIfPossible(string currentWord, string wordGuessedSoFar,
+        public string ChangeCurrentWordWithHarderOneIfPossible(string currentWord, string wordGuessedSoFar,
             string currentInput, string[] allWords, List<int> misplacedCharsSuggestionsSoFar,
             Func<string, string, MisplacedCharInfoHolder, char[], int> evaluateResult
-            //string input, string wordToGuess, MisplacedCharInfoHolder misplacedChars,char[] currentlyGuessedChars
+        //string input, string wordToGuess, MisplacedCharInfoHolder misplacedChars,char[] currentlyGuessedChars
         )
         {
             //We can't change the word with one with different length
             var changeableWords = allWords.AsQueryable()
-                //.Except<string>(new[] { currentWord })
+                .Except(wordsAlreadyChanged)
                 .Except(allWords.Where(w => w.Length != currentWord.Length));
 
             var stillChangeableWordsAfterSomeCharsGuessed =
                 changeableWords.Where(w => MatchesGuessedPattern(w, wordGuessedSoFar));
 
-            //TODO:
-            We need to check also for words which may have guessed (if We didnnot change the word)
+            //TODO:We need to check also for words which may have guessed (if We didnnot change the word)
+
+            //Now just check for words already changed
 
             //TODO:Naming
             var stillChangeableWordsAfterSuggestionsGiven = stillChangeableWordsAfterSomeCharsGuessed.Where(w =>
@@ -31,7 +32,7 @@ namespace TestProject
                     index => currentWord[index] == w[index])
             );
 
-    
+
             var worstWordsToChange = stillChangeableWordsAfterSuggestionsGiven.ToList()
                 .OrderBy(
                     w => evaluateResult(currentInput, w, new MisplacedCharInfoHolder(null),
@@ -40,8 +41,15 @@ namespace TestProject
                 ).ToList();
 
 
-            return worstWordsToChange.First();
+            var wordToChange = worstWordsToChange.First();
+            if (wordToChange != currentWord)
+            {
+                wordsAlreadyChanged.Add(currentWord);
+            }
+
+            return wordToChange;
         }
+        List<string> wordsAlreadyChanged = new List<string>();
         //Checks if the characters already guessed by the user still appear in s wordToChangeWith
         private static bool MatchesGuessedPattern(string wordToChangeWith, string wordGuessedSoFar)
         {

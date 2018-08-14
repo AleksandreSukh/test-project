@@ -40,7 +40,7 @@ namespace TestProject
 
                 var misplacedCharsSuggestionsSoFar = new List<int>();
                 var misplacedCharsSuggestions = new MisplacedCharInfoHolder(index => misplacedCharsSuggestionsSoFar.Add(index));
-
+                var cheatEngine = new CheatEngine();
 
                 while (currentlyGuessed != currentWord)
                 {
@@ -62,7 +62,7 @@ namespace TestProject
                     _output("Please input your guess:");
                     var input = _input();
 
-                    currentWord = CheatEngine.ChangeCurrentWordWithHarderOneIfPossible(currentWord, currentlyGuessed, input, _wordsToGuess,
+                    currentWord = cheatEngine.ChangeCurrentWordWithHarderOneIfPossible(currentWord, currentlyGuessed, input, _wordsToGuess,
                         misplacedCharsSuggestionsSoFar, UpdateCurrentlyGuessed);
 
                     currentlyGuessed = EvaluateResult(input, currentWord, currentlyGuessed, misplacedCharsSuggestions).Item1;
