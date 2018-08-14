@@ -4,40 +4,6 @@ using System.Linq;
 
 namespace TestProject
 {
-    public class MisplacedCharInfoHolder
-    {
-        private int[] _misplacedCharInfo;
-
-        public int[] MisplacedCharInfo => _misplacedCharInfo;
-
-        public bool Contains(int i)
-        {
-            return _misplacedCharInfo.Contains(i);
-        }
-
-        public void Remove(int i)
-        {
-            var newMisplacedCharIndexes = _misplacedCharInfo.ToList();
-            newMisplacedCharIndexes.Remove(i);
-            _misplacedCharInfo = newMisplacedCharIndexes.ToArray();
-        }
-
-        public void AddIfNotAlreadyExists(int i)
-        {
-            if (_misplacedCharInfo.All(ind => ind != i))
-            {
-                var newMisplacedCharIndexes = _misplacedCharInfo.ToList();
-                newMisplacedCharIndexes.Add(i);
-                _misplacedCharInfo = newMisplacedCharIndexes.ToArray();
-            }
-        }
-
-        public void RemoveIfContains(int i)
-        {
-            if (Contains(i))
-                Remove(i);
-        }
-    }
     public class TestApp
     {
         private readonly Action<string> _output;
@@ -63,6 +29,7 @@ namespace TestProject
             while (true)
             {
                 var currentWord = _wordsToGuess.FirstOrDefault();
+
                 if (currentWord == null)
                 {
                     _output("You've guessed all the words! Bye!");
@@ -71,8 +38,9 @@ namespace TestProject
 
                 var currentlyGuessed = GenerateEmptyResult(currentWord.Length);
 
-                var misplacedCharsSuggestions = new MisplacedCharInfoHolder();
                 var misplacedCharsSuggestionsSoFar = new List<int>();
+                var misplacedCharsSuggestions = new MisplacedCharInfoHolder(index => misplacedCharsSuggestionsSoFar.Add(index));
+
 
                 while (currentlyGuessed != currentWord)
                 {
@@ -91,45 +59,40 @@ namespace TestProject
 
                     _output(hint);
 
+                    _output("Please input your guess:");
                     var input = _input();
 
-                    currentlyGuessed = EvaluateResult(input, currentWord, currentlyGuessed, misplacedCharsSuggestions);
+                    currentWord = CheatEngine.ChangeCurrentWordWithHarderOneIfPossible(currentWord, currentlyGuessed, input, _wordsToGuess,
+                        misplacedCharsSuggestionsSoFar, UpdateCurrentlyGuessed);
+
+                    currentlyGuessed = EvaluateResult(input, currentWord, currentlyGuessed, misplacedCharsSuggestions).Item1;
                     _output(currentlyGuessed);
                 }
 
                 _output("Nice job. Moving to the next word");
 
-                //Remove first wort in the array
                 var currentWordList = _wordsToGuess.ToList();
-                currentWordList.RemoveAt(0);
+                currentWordList.Remove(currentWord);
                 _wordsToGuess = currentWordList.ToArray();
             }
         }
 
-        private string EvaluateResult(string input, string wordToGuess, string currentlyGuessed, MisplacedCharInfoHolder misplacedChars)
+        private Tuple<string, int> EvaluateResult(string input, string wordToGuess, string currentlyGuessed, MisplacedCharInfoHolder misplacedChars)
         {
             if (input.Length != wordToGuess.Length)
             {
                 _output("Inserted word length doesn't even match the length requested");
-                return currentlyGuessed;
+                return new Tuple<string, int>(currentlyGuessed, 0);
             }
 
             var currentlyGuessedChars = currentlyGuessed.ToCharArray();
 
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (input[i] == wordToGuess[i] && input[i] != currentlyGuessedChars[i])
-                {
-                    currentlyGuessedChars[i] = input[i];
-                    misplacedChars.RemoveIfContains(i);
-                }
-            }
+            var charactersGuessed = UpdateCurrentlyGuessed(input, wordToGuess, misplacedChars, currentlyGuessedChars);
 
             //To add misplaced character suggestions
 
             //Create not guessed chars mask 
             var notGuessedCharsMask = wordToGuess.ToCharArray();
-
             for (int i = 0; i < currentlyGuessedChars.Length; i++)
             {
                 if (currentlyGuessedChars[i] != NotGuessedChar)
@@ -142,7 +105,26 @@ namespace TestProject
             UpdateMisplacedCharSuggestions(misplacedChars, input, notGuessedCharsMask);
 
 
-            return new string(currentlyGuessedChars);
+            return new Tuple<string, int>(new string(currentlyGuessedChars), charactersGuessed);
+        }
+
+        private static int UpdateCurrentlyGuessed(string input, string wordToGuess, MisplacedCharInfoHolder misplacedChars,
+            char[] currentlyGuessedChars)
+        {
+            var changedChars = 0;
+
+            for (int i = 0; i < input.Length; i++)
+            {
+                if (input[i] == wordToGuess[i] && input[i] != currentlyGuessedChars[i])
+                {
+                    currentlyGuessedChars[i] = input[i];
+                    changedChars++;
+                    //TODO:Should refactor: take this task outside of the method
+                    misplacedChars.RemoveIfContains(i);
+                }
+            }
+
+            return changedChars;
         }
 
         private void UpdateMisplacedCharSuggestions(MisplacedCharInfoHolder misplacedChars, string input, char[] charsLeftToGuess)
