@@ -4,6 +4,40 @@ using System.Linq;
 
 namespace TestProject
 {
+    public class MisplacedCharInfoHolder
+    {
+        private int[] _misplacedCharInfo;
+
+        public int[] MisplacedCharInfo => _misplacedCharInfo;
+
+        public bool Contains(int i)
+        {
+            return _misplacedCharInfo.Contains(i);
+        }
+
+        public void Remove(int i)
+        {
+            var newMisplacedCharIndexes = _misplacedCharInfo.ToList();
+            newMisplacedCharIndexes.Remove(i);
+            _misplacedCharInfo = newMisplacedCharIndexes.ToArray();
+        }
+
+        public void AddIfNotAlreadyExists(int i)
+        {
+            if (_misplacedCharInfo.All(ind => ind != i))
+            {
+                var newMisplacedCharIndexes = _misplacedCharInfo.ToList();
+                newMisplacedCharIndexes.Add(i);
+                _misplacedCharInfo = newMisplacedCharIndexes.ToArray();
+            }
+        }
+
+        public void RemoveIfContains(int i)
+        {
+            if (Contains(i))
+                Remove(i);
+        }
+    }
     public class TestApp
     {
         private readonly Action<string> _output;
@@ -36,13 +70,15 @@ namespace TestProject
                 }
 
                 var currentlyGuessed = GenerateEmptyResult(currentWord.Length);
-                var misplacedCharsSuggestions = new List<int>();
+
+                var misplacedCharsSuggestions = new MisplacedCharInfoHolder();
+                var misplacedCharsSuggestionsSoFar = new List<int>();
 
                 while (currentlyGuessed != currentWord)
                 {
                     var hint = $"Current word consists of {currentWord.Length} letters";
                     var misplacedCharsHint = string.Empty;
-                    foreach (var suggestion in misplacedCharsSuggestions)
+                    foreach (var suggestion in misplacedCharsSuggestions.MisplacedCharInfo)
                     {
                         var charIndex = suggestion;
                         var charAtIndex = currentWord[charIndex];
@@ -70,7 +106,7 @@ namespace TestProject
             }
         }
 
-        private string EvaluateResult(string input, string wordToGuess, string currentlyGuessed, List<int> misplacedChars)
+        private string EvaluateResult(string input, string wordToGuess, string currentlyGuessed, MisplacedCharInfoHolder misplacedChars)
         {
             if (input.Length != wordToGuess.Length)
             {
@@ -85,8 +121,7 @@ namespace TestProject
                 if (input[i] == wordToGuess[i] && input[i] != currentlyGuessedChars[i])
                 {
                     currentlyGuessedChars[i] = input[i];
-                    if (misplacedChars.Contains(i))
-                        misplacedChars.Remove(i);
+                    misplacedChars.RemoveIfContains(i);
                 }
             }
 
@@ -110,14 +145,13 @@ namespace TestProject
             return new string(currentlyGuessedChars);
         }
 
-        private void UpdateMisplacedCharSuggestions(List<int> misplacedChars, string input, char[] charsLeftToGuess)
+        private void UpdateMisplacedCharSuggestions(MisplacedCharInfoHolder misplacedChars, string input, char[] charsLeftToGuess)
         {
             for (var i = 0; i < charsLeftToGuess.Length; i++)
             {
                 var inputChar = charsLeftToGuess[i];
                 if (input.Any(c => c == inputChar))
-                    if (misplacedChars.All(ind => ind != i))
-                        misplacedChars.Add(i);
+                    misplacedChars.AddIfNotAlreadyExists(i);
             }
         }
 
